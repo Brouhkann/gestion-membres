@@ -134,6 +134,67 @@ class AuthNotifier extends StateNotifier<AuthState> {
   void updateUser(UserModel user) {
     state = AuthState.authenticated(user);
   }
+
+  /// Change le mot de passe
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      // Vérifier d'abord le mot de passe actuel en se reconnectant
+      if (state.user == null) {
+        throw Exception('Utilisateur non connecté');
+      }
+
+      // Re-authentifier avec le mot de passe actuel
+      await _repository.signIn(
+        telephone: state.user!.telephone,
+        password: currentPassword,
+      );
+
+      // Changer le mot de passe
+      await _repository.updatePassword(newPassword);
+
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Mot de passe actuel incorrect',
+      );
+      return false;
+    }
+  }
+
+  /// Crée un compte responsable (patriarche ou responsable département)
+  Future<UserModel?> createResponsableAccount({
+    required String fideleId,
+    required String telephone,
+    required String nom,
+    required String prenom,
+    required UserRole role,
+    required String egliseId,
+    String? tribuId,
+    String? departementId,
+  }) async {
+    try {
+      final user = await _repository.createUser(
+        telephone: telephone,
+        password: '12345678', // Mot de passe par défaut
+        nom: nom,
+        prenom: prenom,
+        role: role,
+        egliseId: egliseId,
+        tribuId: tribuId,
+        departementId: departementId,
+      );
+      return user;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return null;
+    }
+  }
 }
 
 /// Provider principal pour l'authentification
