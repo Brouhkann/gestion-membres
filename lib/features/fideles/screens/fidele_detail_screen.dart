@@ -12,6 +12,8 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/tribu_provider.dart';
 import '../../../providers/departement_provider.dart';
 import '../../../providers/cellule_provider.dart';
+import '../../../providers/presence_provider.dart';
+import '../../../data/models/enums.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 import '../../../data/services/supabase_service.dart';
 
@@ -268,10 +270,296 @@ class FideleDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
+
+                const SizedBox(height: AppSizes.paddingM),
+
+                // Historique de présences
+                _buildHistoriquePresences(context, ref, fideleId),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildHistoriquePresences(BuildContext context, WidgetRef ref, String fideleId) {
+    final historiqueAsync = ref.watch(historiqueFideleProvider(fideleId));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSizes.paddingM),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.history, size: 20, color: AppColors.primary),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Historique de présences',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                historiqueAsync.when(
+                  data: (presences) => Text(
+                    '${presences.length} sessions',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.paddingM),
+            historiqueAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (error, _) => Text(
+                'Erreur: $error',
+                style: const TextStyle(color: AppColors.error),
+              ),
+              data: (presences) {
+                if (presences.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Center(
+                      child: Text(
+                        'Aucune présence enregistrée',
+                        style: TextStyle(color: AppColors.textHint),
+                      ),
+                    ),
+                  );
+                }
+
+                // Affiche les 10 dernières, avec option "Voir tout"
+                final displayCount = presences.length > 10 ? 10 : presences.length;
+                final displayedPresences = presences.sublist(0, displayCount);
+
+                return Column(
+                  children: [
+                    ...displayedPresences.map((presence) {
+                      final isPresent = presence.statut == StatutPresence.present;
+                      final isJustifie = !isPresent && presence.justifie;
+
+                      Color statusColor;
+                      String statusText;
+                      if (isPresent) {
+                        statusColor = const Color(0xFF4CAF50);
+                        statusText = 'Présent';
+                      } else if (isJustifie) {
+                        statusColor = const Color(0xFFFF9800);
+                        statusText = 'Absent justifié';
+                      } else {
+                        statusColor = const Color(0xFFF44336);
+                        statusText = 'Absent';
+                      }
+
+                      final dateStr = presence.sessionDate != null
+                          ? '${presence.sessionDate!.day.toString().padLeft(2, '0')}/${presence.sessionDate!.month.toString().padLeft(2, '0')}/${presence.sessionDate!.year}'
+                          : '${presence.createdAt.day.toString().padLeft(2, '0')}/${presence.createdAt.month.toString().padLeft(2, '0')}/${presence.createdAt.year}';
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              dateStr,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    statusText,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                  if (isJustifie && presence.motifAbsence != null && presence.motifAbsence!.isNotEmpty)
+                                    Text(
+                                      presence.motifAbsence!,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondary,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    if (presences.length > 10)
+                      TextButton(
+                        onPressed: () => _showFullHistorique(context, presences),
+                        child: Text(
+                          'Voir tout (${presences.length} sessions)',
+                          style: const TextStyle(color: AppColors.primary),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFullHistorique(BuildContext context, List presences) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.8,
+        ),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.divider,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      const Icon(Icons.history, color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Historique complet (${presences.length})',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: presences.length,
+                itemBuilder: (ctx, index) {
+                  final presence = presences[index];
+                  final isPresent = presence.statut == StatutPresence.present;
+                  final isJustifie = !isPresent && presence.justifie;
+
+                  Color statusColor;
+                  String statusText;
+                  if (isPresent) {
+                    statusColor = const Color(0xFF4CAF50);
+                    statusText = 'Présent';
+                  } else if (isJustifie) {
+                    statusColor = const Color(0xFFFF9800);
+                    statusText = 'Absent justifié';
+                  } else {
+                    statusColor = const Color(0xFFF44336);
+                    statusText = 'Absent';
+                  }
+
+                  final dateStr = presence.sessionDate != null
+                      ? '${presence.sessionDate!.day.toString().padLeft(2, '0')}/${presence.sessionDate!.month.toString().padLeft(2, '0')}/${presence.sessionDate!.year}'
+                      : '${presence.createdAt.day.toString().padLeft(2, '0')}/${presence.createdAt.month.toString().padLeft(2, '0')}/${presence.createdAt.year}';
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          dateStr,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                statusText,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: statusColor,
+                                ),
+                              ),
+                              if (isJustifie && presence.motifAbsence != null && presence.motifAbsence!.isNotEmpty)
+                                Text(
+                                  presence.motifAbsence!,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

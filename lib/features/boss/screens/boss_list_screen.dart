@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../providers/fidele_provider.dart';
 import '../../../providers/departement_provider.dart';
+import '../../../providers/tribu_provider.dart';
+import '../../../providers/cellule_provider.dart';
 import '../../fideles/widgets/fidele_card.dart';
 import '../../../core/router/app_router.dart';
 
@@ -13,51 +15,50 @@ class BossListScreen extends ConsumerStatefulWidget {
   ConsumerState<BossListScreen> createState() => _BossListScreenState();
 }
 
-class _BossListScreenState extends ConsumerState<BossListScreen> {
+class _BossListScreenState extends ConsumerState<BossListScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   String _filterStatus = 'tous';
-  bool _showServiteurs = false;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(fidelesProvider.notifier).loadAll();
       ref.read(departementsProvider.notifier).loadAllWithStats();
+      ref.read(tribusProvider.notifier).loadAllWithStats();
+      ref.read(cellulesProvider.notifier).loadAllWithStats();
     });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final fidelesState = ref.watch(fidelesProvider);
     final departementsState = ref.watch(departementsProvider);
+    final tribusState = ref.watch(tribusProvider);
+    final cellulesState = ref.watch(cellulesProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        title: Text(
-          _showServiteurs ? 'Serviteurs' : 'BOSS',
-          style: const TextStyle(
+        title: const Text(
+          'BOSS',
+          style: TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
-          // Toggle BOSS / Serviteurs
-          TextButton.icon(
-            onPressed: () {
-              setState(() {
-                _showServiteurs = !_showServiteurs;
-              });
-            },
-            icon: Icon(
-              _showServiteurs ? Icons.work_rounded : Icons.star_rounded,
-              size: 18,
-            ),
-            label: Text(_showServiteurs ? 'Voir BOSS' : 'Serviteurs'),
-          ),
-          // Filtre
+          // Filtre (seulement pour l'onglet BOSS)
           PopupMenuButton<String>(
             icon: Stack(
               children: [
@@ -85,10 +86,27 @@ class _BossListScreenState extends ConsumerState<BossListScreen> {
             ],
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: AppColors.textSecondary,
+          indicatorColor: AppColors.primary,
+          indicatorWeight: 3,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+          tabs: const [
+            Tab(text: 'BOSS'),
+            Tab(text: 'Responsables'),
+          ],
+        ),
       ),
-      body: _showServiteurs
-          ? _buildServiteursList(departementsState)
-          : _buildBossList(fidelesState),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildBossList(fidelesState),
+          _buildResponsablesList(tribusState, departementsState, cellulesState),
+        ],
+      ),
     );
   }
 
@@ -216,14 +234,27 @@ class _BossListScreenState extends ConsumerState<BossListScreen> {
     );
   }
 
-  Widget _buildServiteursList(DepartementsState departementsState) {
-    if (departementsState.isLoading) {
+  Widget _buildResponsablesList(
+    TribusState tribusState,
+    DepartementsState departementsState,
+    CellulesState cellulesState,
+  ) {
+    final isLoading = tribusState.isLoading || departementsState.isLoading || cellulesState.isLoading;
+
+    if (isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Les serviteurs = responsables de départements qui ont un responsable
+    final tribusAvecPatriarche = tribusState.tribus
+        .where((t) => t.patriarcheNom != null)
+        .toList();
+
     final departementsAvecResponsable = departementsState.departements
         .where((d) => d.responsableNom != null)
+        .toList();
+
+    final cellulesAvecResponsable = cellulesState.cellules
+        .where((c) => c.responsableNom != null)
         .toList();
 
     return ListView(
@@ -243,97 +274,189 @@ class _BossListScreenState extends ConsumerState<BossListScreen> {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Les serviteurs sont les patriarches et responsables de départements/cellules',
+                  'Les responsables sont les patriarches de tribus, responsables de départements et responsables de cellules',
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ),
             ],
           ),
         ),
-        // Responsables de départements
-        const Text(
+
+        // Section Patriarches
+        _buildSectionHeader(
+          'Patriarches',
+          Icons.groups_rounded,
+          AppColors.patriarcheColor,
+          tribusAvecPatriarche.length,
+        ),
+        const SizedBox(height: 8),
+        if (tribusAvecPatriarche.isEmpty)
+          _buildEmptySection('Aucun patriarche désigné')
+        else
+          ...tribusAvecPatriarche.map((tribu) => _buildResponsableCard(
+                nom: tribu.patriarcheNom!,
+                sousTitre: 'Tribu: ${tribu.nom}',
+                icon: Icons.groups_rounded,
+                color: AppColors.patriarcheColor,
+                badge: 'Patriarche',
+              )),
+
+        const SizedBox(height: 20),
+
+        // Section Responsables de départements
+        _buildSectionHeader(
           'Responsables de départements',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
+          Icons.business_rounded,
+          AppColors.responsableColor,
+          departementsAvecResponsable.length,
         ),
         const SizedBox(height: 8),
         if (departementsAvecResponsable.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: const Center(
-              child: Text(
-                'Aucun responsable désigné',
-                style: TextStyle(color: AppColors.textHint),
-              ),
-            ),
-          )
+          _buildEmptySection('Aucun responsable désigné')
         else
-          ...departementsAvecResponsable.map((dept) => Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.divider),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.responsableColor.withAlpha(20),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.business_rounded,
-                        color: AppColors.responsableColor,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            dept.responsableNom!,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Département: ${dept.nom}',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.responsableColor.withAlpha(15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Responsable',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.responsableColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+          ...departementsAvecResponsable.map((dept) => _buildResponsableCard(
+                nom: dept.responsableNom!,
+                sousTitre: 'Département: ${dept.nom}',
+                icon: Icons.business_rounded,
+                color: AppColors.responsableColor,
+                badge: 'Responsable',
+              )),
+
+        const SizedBox(height: 20),
+
+        // Section Responsables de cellules
+        _buildSectionHeader(
+          'Responsables de cellules',
+          Icons.cell_tower_rounded,
+          AppColors.secondary,
+          cellulesAvecResponsable.length,
+        ),
+        const SizedBox(height: 8),
+        if (cellulesAvecResponsable.isEmpty)
+          _buildEmptySection('Aucun responsable désigné')
+        else
+          ...cellulesAvecResponsable.map((cellule) => _buildResponsableCard(
+                nom: cellule.responsableNom!,
+                sousTitre: 'Cellule: ${cellule.nom}',
+                icon: Icons.cell_tower_rounded,
+                color: AppColors.secondary,
+                badge: 'Responsable',
               )),
       ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon, Color color, int count) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withAlpha(20),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptySection(String message) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Center(
+        child: Text(
+          message,
+          style: const TextStyle(color: AppColors.textHint),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResponsableCard({
+    required String nom,
+    required String sousTitre,
+    required IconData icon,
+    required Color color,
+    required String badge,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withAlpha(20),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nom,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  sousTitre,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withAlpha(15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              badge,
+              style: TextStyle(
+                fontSize: 11,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

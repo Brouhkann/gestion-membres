@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/fidele_model.dart';
 import '../data/repositories/fidele_repository.dart';
+import '../data/services/supabase_service.dart';
 import 'auth_provider.dart';
 
 /// Provider pour le repository des fidèles
@@ -210,4 +211,52 @@ final mesFidelesProvider = FutureProvider<List<FideleModel>>((ref) async {
 
   final repository = ref.watch(fideleRepositoryProvider);
   return await repository.getByTribu(tribuId);
+});
+
+/// Provider pour tous les responsables (patriarches + resp. départements + resp. cellules)
+/// Utilisé par le pasteur pour l'appel des responsables lors des réunions
+final responsablesProvider = FutureProvider<List<FideleModel>>((ref) async {
+  final supabase = SupabaseService.instance;
+
+  // Récupère les IDs des patriarches (depuis les tribus)
+  final tribus = await supabase.tribus
+      .select('patriarche_id')
+      .not('patriarche_id', 'is', null);
+  final patriarcheIds = tribus
+      .map((t) => t['patriarche_id'] as String?)
+      .where((id) => id != null)
+      .cast<String>()
+      .toSet();
+
+  // Récupère les IDs des responsables de départements
+  final depts = await supabase.departements
+      .select('responsable_id')
+      .not('responsable_id', 'is', null);
+  final deptResponsableIds = depts
+      .map((d) => d['responsable_id'] as String?)
+      .where((id) => id != null)
+      .cast<String>()
+      .toSet();
+
+  // Récupère les IDs des responsables de cellules
+  final cellules = await supabase.cellules
+      .select('responsable_id')
+      .not('responsable_id', 'is', null);
+  final celluleResponsableIds = cellules
+      .map((c) => c['responsable_id'] as String?)
+      .where((id) => id != null)
+      .cast<String>()
+      .toSet();
+
+  // Combine tous les IDs uniques
+  final allIds = {...patriarcheIds, ...deptResponsableIds, ...celluleResponsableIds};
+  if (allIds.isEmpty) return [];
+
+  // Récupère les fidèles correspondants
+  final data = await supabase.fideles
+      .select('*, tribu:tribus!fideles_tribu_id_fkey(nom)')
+      .inFilter('id', allIds.toList())
+      .order('nom');
+
+  return data.map((json) => FideleModel.fromJson(json)).toList();
 });

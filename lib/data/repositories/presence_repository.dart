@@ -45,6 +45,8 @@ class PresenceRepository {
         'session_id': sessionId,
         'fidele_id': p.fideleId,
         'statut': p.statut.name,
+        'justifie': p.justifie,
+        if (p.motifAbsence != null) 'motif_absence': p.motifAbsence,
       }).toList();
 
       await _supabase.presences.insert(presencesData);
@@ -147,7 +149,7 @@ class PresenceRepository {
   }
 
   /// Récupère l'historique des présences d'un fidèle
-  Future<List<PresenceModel>> getHistoriqueFidele(String fideleId, {int limit = 20}) async {
+  Future<List<PresenceModel>> getHistoriqueFidele(String fideleId, {int limit = 100}) async {
     try {
       final data = await _supabase.presences
           .select('*, session:sessions_appel(date, type_groupe)')
@@ -156,6 +158,30 @@ class PresenceRepository {
           .limit(limit);
 
       return data.map((json) => PresenceModel.fromJson(json)).toList();
+    } on PostgrestException catch (e) {
+      throw DatabaseException(message: e.message, originalError: e);
+    }
+  }
+
+  /// Compte les absences consécutives d'un fidèle depuis la dernière présence
+  Future<int> getAbsencesConsecutives(String fideleId) async {
+    try {
+      final data = await _supabase.presences
+          .select('statut, session:sessions_appel(date)')
+          .eq('fidele_id', fideleId)
+          .order('created_at', ascending: false)
+          .limit(50);
+
+      int count = 0;
+      for (final item in data) {
+        final statut = StatutPresence.fromString(item['statut'] as String);
+        if (statut == StatutPresence.absent) {
+          count++;
+        } else {
+          break;
+        }
+      }
+      return count;
     } on PostgrestException catch (e) {
       throw DatabaseException(message: e.message, originalError: e);
     }

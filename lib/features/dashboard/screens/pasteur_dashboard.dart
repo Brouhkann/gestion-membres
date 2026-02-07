@@ -6,6 +6,7 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../data/models/enums.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/fidele_provider.dart';
 import '../../../providers/tribu_provider.dart';
@@ -168,6 +169,37 @@ class _PasteurDashboardState extends ConsumerState<PasteurDashboard> {
                   child: CircularProgressIndicator(),
                 ),
                 error: (_, __) => const Text('Erreur de chargement'),
+              ),
+
+              const SizedBox(height: AppSizes.paddingL),
+
+              // Appel des responsables
+              Text(
+                'Réunions',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: AppSizes.paddingS),
+
+              SizedBox(
+                width: double.infinity,
+                height: AppSizes.buttonHeightL,
+                child: ElevatedButton.icon(
+                  onPressed: () => context.goToAppel(
+                    TypeGroupe.responsables,
+                    user?.egliseId ?? '',
+                  ),
+                  icon: const Icon(Icons.fact_check),
+                  label: const Text('Appel des responsables'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusM),
+                    ),
+                  ),
+                ),
               ),
 
               const SizedBox(height: AppSizes.paddingL),

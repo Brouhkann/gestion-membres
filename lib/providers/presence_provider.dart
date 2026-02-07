@@ -145,6 +145,48 @@ class AppelNotifier extends StateNotifier<AppelState> {
     );
   }
 
+  /// Justifie l'absence d'un fidèle avec un motif
+  void justifierAbsence(String fideleId, String motif) {
+    if (state.appelEnCours == null) return;
+
+    final fidelesAppeles = state.appelEnCours!.fidelesAppeles.map((f) {
+      if (f.fideleId == fideleId) {
+        return f.copyWith(
+          justifie: true,
+          motifAbsence: motif,
+        );
+      }
+      return f;
+    }).toList();
+
+    state = state.copyWith(
+      appelEnCours: state.appelEnCours!.copyWith(
+        fidelesAppeles: fidelesAppeles,
+      ),
+    );
+  }
+
+  /// Bascule la justification d'un absent (avec ou sans motif)
+  void toggleJustification(String fideleId, bool justifie, {String? motif}) {
+    if (state.appelEnCours == null) return;
+
+    final fidelesAppeles = state.appelEnCours!.fidelesAppeles.map((f) {
+      if (f.fideleId == fideleId) {
+        return f.copyWith(
+          justifie: justifie,
+          motifAbsence: justifie ? (motif ?? f.motifAbsence) : null,
+        );
+      }
+      return f;
+    }).toList();
+
+    state = state.copyWith(
+      appelEnCours: state.appelEnCours!.copyWith(
+        fidelesAppeles: fidelesAppeles,
+      ),
+    );
+  }
+
   /// Enregistre l'appel
   Future<bool> enregistrerAppel() async {
     if (state.appelEnCours == null || _userId == null) return false;
@@ -167,6 +209,8 @@ class AppelNotifier extends StateNotifier<AppelState> {
           sessionId: session.id,
           fideleId: f.fideleId,
           statut: f.statut!,
+          justifie: f.justifie,
+          motifAbsence: f.motifAbsence,
           createdAt: DateTime.now(),
         );
       }).toList();
@@ -246,4 +290,18 @@ final derniereSessionProvider = FutureProvider.family<SessionAppelModel?,
     typeGroupe: params.typeGroupe,
     groupeId: params.groupeId,
   );
+});
+
+/// Provider pour les absences consécutives d'un fidèle
+final absencesConsecutivesProvider =
+    FutureProvider.family<int, String>((ref, fideleId) async {
+  final repository = ref.watch(presenceRepositoryProvider);
+  return await repository.getAbsencesConsecutives(fideleId);
+});
+
+/// Provider pour l'historique des présences d'un fidèle
+final historiqueFideleProvider =
+    FutureProvider.family<List<PresenceModel>, String>((ref, fideleId) async {
+  final repository = ref.watch(presenceRepositoryProvider);
+  return await repository.getHistoriqueFidele(fideleId);
 });

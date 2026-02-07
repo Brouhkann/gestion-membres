@@ -95,6 +95,8 @@ class PresenceModel extends Equatable {
   final String sessionId;
   final String fideleId;
   final StatutPresence statut;
+  final bool justifie;
+  final String? motifAbsence;
   final DateTime createdAt;
 
   // Relations
@@ -102,15 +104,23 @@ class PresenceModel extends Equatable {
   final String? fidelePrenom;
   final String? fidelePhotoUrl;
 
+  // Session (chargée via join)
+  final DateTime? sessionDate;
+  final String? sessionTypeGroupe;
+
   const PresenceModel({
     required this.id,
     required this.sessionId,
     required this.fideleId,
     required this.statut,
+    this.justifie = false,
+    this.motifAbsence,
     required this.createdAt,
     this.fideleNom,
     this.fidelePrenom,
     this.fidelePhotoUrl,
+    this.sessionDate,
+    this.sessionTypeGroupe,
   });
 
   /// Nom complet du fidèle
@@ -128,10 +138,16 @@ class PresenceModel extends Equatable {
       sessionId: json['session_id'] as String,
       fideleId: json['fidele_id'] as String,
       statut: StatutPresence.fromString(json['statut'] as String),
+      justifie: json['justifie'] as bool? ?? false,
+      motifAbsence: json['motif_absence'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       fideleNom: json['fidele']?['nom'] as String?,
       fidelePrenom: json['fidele']?['prenom'] as String?,
       fidelePhotoUrl: json['fidele']?['photo_url'] as String?,
+      sessionDate: json['session']?['date'] != null
+          ? DateTime.parse(json['session']['date'] as String)
+          : null,
+      sessionTypeGroupe: json['session']?['type_groupe'] as String?,
     );
   }
 
@@ -150,6 +166,8 @@ class PresenceModel extends Equatable {
       'session_id': sessionId,
       'fidele_id': fideleId,
       'statut': statut.name,
+      'justifie': justifie,
+      if (motifAbsence != null) 'motif_absence': motifAbsence,
     };
   }
 
@@ -158,20 +176,28 @@ class PresenceModel extends Equatable {
     String? sessionId,
     String? fideleId,
     StatutPresence? statut,
+    bool? justifie,
+    String? motifAbsence,
     DateTime? createdAt,
     String? fideleNom,
     String? fidelePrenom,
     String? fidelePhotoUrl,
+    DateTime? sessionDate,
+    String? sessionTypeGroupe,
   }) {
     return PresenceModel(
       id: id ?? this.id,
       sessionId: sessionId ?? this.sessionId,
       fideleId: fideleId ?? this.fideleId,
       statut: statut ?? this.statut,
+      justifie: justifie ?? this.justifie,
+      motifAbsence: motifAbsence ?? this.motifAbsence,
       createdAt: createdAt ?? this.createdAt,
       fideleNom: fideleNom ?? this.fideleNom,
       fidelePrenom: fidelePrenom ?? this.fidelePrenom,
       fidelePhotoUrl: fidelePhotoUrl ?? this.fidelePhotoUrl,
+      sessionDate: sessionDate ?? this.sessionDate,
+      sessionTypeGroupe: sessionTypeGroupe ?? this.sessionTypeGroupe,
     );
   }
 
@@ -247,6 +273,8 @@ class FideleAppelItem {
   final String prenom;
   final String? photoUrl;
   final StatutPresence? statut;
+  final bool justifie;
+  final String? motifAbsence;
 
   FideleAppelItem({
     required this.fideleId,
@@ -254,6 +282,8 @@ class FideleAppelItem {
     required this.prenom,
     this.photoUrl,
     this.statut,
+    this.justifie = false,
+    this.motifAbsence,
   });
 
   String get nomComplet => '$prenom $nom';
@@ -264,13 +294,19 @@ class FideleAppelItem {
     return '$p$n'.toUpperCase();
   }
 
-  FideleAppelItem copyWith({StatutPresence? statut}) {
+  FideleAppelItem copyWith({
+    StatutPresence? statut,
+    bool? justifie,
+    String? motifAbsence,
+  }) {
     return FideleAppelItem(
       fideleId: fideleId,
       nom: nom,
       prenom: prenom,
       photoUrl: photoUrl,
       statut: statut ?? this.statut,
+      justifie: justifie ?? this.justifie,
+      motifAbsence: motifAbsence ?? this.motifAbsence,
     );
   }
 }

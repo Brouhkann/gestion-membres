@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/fidele_model.dart';
+import '../../../providers/presence_provider.dart';
 import '../../../shared/widgets/avatar_widget.dart';
 
-class FideleCard extends StatelessWidget {
+class FideleCard extends ConsumerWidget {
   final FideleModel fidele;
   final VoidCallback? onTap;
 
@@ -13,8 +15,23 @@ class FideleCard extends StatelessWidget {
     this.onTap,
   });
 
+  Color _getAssiduiteColor(int absencesConsecutives) {
+    switch (absencesConsecutives) {
+      case 0:
+        return const Color(0xFF4CAF50); // Vert - assidu
+      case 1:
+        return const Color(0xFFFFC107); // Jaune
+      case 2:
+        return const Color(0xFFFF9800); // Orange
+      default:
+        return const Color(0xFFF44336); // Rouge - 3+
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final absencesAsync = ref.watch(absencesConsecutivesProvider(fidele.id));
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -39,7 +56,7 @@ class FideleCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar avec indicateur de statut
+            // Avatar avec indicateur de statut + assiduité
             Stack(
               children: [
                 AvatarWidget(
@@ -47,6 +64,7 @@ class FideleCard extends StatelessWidget {
                   photoUrl: fidele.photoUrl,
                   size: 50,
                 ),
+                // Indicateur actif/inactif (en bas à droite)
                 Positioned(
                   right: 0,
                   bottom: 0,
@@ -61,6 +79,27 @@ class FideleCard extends StatelessWidget {
                         width: 2,
                       ),
                     ),
+                  ),
+                ),
+                // Indicateur d'assiduité (en haut à gauche)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  child: absencesAsync.when(
+                    data: (absences) => Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: _getAssiduiteColor(absences),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.surface,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
                   ),
                 ),
               ],

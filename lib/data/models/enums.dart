@@ -134,7 +134,8 @@ enum TypeGroupe {
   tribu,
   departement,
   cellule,
-  eglise;
+  eglise,
+  responsables;
 
   String get label {
     switch (this) {
@@ -146,6 +147,8 @@ enum TypeGroupe {
         return 'Cellule';
       case TypeGroupe.eglise:
         return 'Église entière';
+      case TypeGroupe.responsables:
+        return 'Responsables';
     }
   }
 }
