@@ -14,7 +14,7 @@ class FideleRepository {
   Future<List<FideleModel>> getAll() async {
     try {
       final data = await _supabase.fideles
-          .select('*, tribu:tribus(nom)')
+          .select('*, tribu:tribus!tribu_id(nom)')
           .order('prenom');
 
       return data.map((json) => FideleModel.fromJson(json)).toList();
@@ -27,7 +27,7 @@ class FideleRepository {
   Future<List<FideleModel>> getByTribu(String tribuId) async {
     try {
       final data = await _supabase.fideles
-          .select('*, tribu:tribus(nom)')
+          .select('*, tribu:tribus!tribu_id(nom)')
           .eq('tribu_id', tribuId)
           .order('prenom');
 
@@ -42,7 +42,7 @@ class FideleRepository {
     try {
       final data = await _supabase.client
           .from('fidele_departements')
-          .select('fidele:fideles(*, tribu:tribus(nom))')
+          .select('fidele:fideles(*, tribu:tribus!tribu_id(nom))')
           .eq('departement_id', departementId);
 
       return data
@@ -57,7 +57,7 @@ class FideleRepository {
   Future<FideleModel> getById(String id) async {
     try {
       final data = await _supabase.fideles
-          .select('*, tribu:tribus(nom)')
+          .select('*, tribu:tribus!tribu_id(nom)')
           .eq('id', id)
           .single();
 
@@ -75,7 +75,7 @@ class FideleRepository {
     try {
       final data = await _supabase.fideles
           .insert(fidele.toInsertJson())
-          .select('*, tribu:tribus(nom)')
+          .select('*, tribu:tribus!tribu_id(nom)')
           .single();
 
       return FideleModel.fromJson(data);
@@ -105,7 +105,7 @@ class FideleRepository {
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', fidele.id)
-          .select('*, tribu:tribus(nom)')
+          .select('*, tribu:tribus!tribu_id(nom)')
           .single();
 
       return FideleModel.fromJson(data);
@@ -142,7 +142,7 @@ class FideleRepository {
     try {
       final searchTerm = '%$query%';
       final data = await _supabase.fideles
-          .select('*, tribu:tribus(nom)')
+          .select('*, tribu:tribus!tribu_id(nom)')
           .or('nom.ilike.$searchTerm,prenom.ilike.$searchTerm,telephone.ilike.$searchTerm')
           .order('prenom');
 
@@ -156,7 +156,7 @@ class FideleRepository {
   Future<List<FideleModel>> getActifs() async {
     try {
       final data = await _supabase.fideles
-          .select('*, tribu:tribus(nom)')
+          .select('*, tribu:tribus!tribu_id(nom)')
           .eq('actif', true)
           .order('prenom');
 
@@ -171,7 +171,7 @@ class FideleRepository {
     try {
       final now = DateTime.now();
       final data = await _supabase.fideles
-          .select('*, tribu:tribus(nom)')
+          .select('*, tribu:tribus!tribu_id(nom)')
           .eq('jour_naissance', now.day)
           .eq('mois_naissance', now.month)
           .eq('actif', true)
@@ -190,7 +190,7 @@ class FideleRepository {
 
       // Récupère tous les fidèles actifs avec date de naissance
       final data = await _supabase.fideles
-          .select('*, tribu:tribus(nom)')
+          .select('*, tribu:tribus!tribu_id(nom)')
           .eq('actif', true)
           .order('mois_naissance')
           .order('jour_naissance');
@@ -215,7 +215,7 @@ class FideleRepository {
     try {
       final now = DateTime.now();
       final data = await _supabase.fideles
-          .select('*, tribu:tribus(nom)')
+          .select('*, tribu:tribus!tribu_id(nom)')
           .eq('mois_naissance', now.month)
           .eq('actif', true)
           .order('jour_naissance');
