@@ -74,15 +74,34 @@ final mesAnniversairesProvider =
 
 /// Provider pour les statistiques globales des anniversaires (pasteur)
 final anniversairesStatsProvider = FutureProvider<AnniversairesStats>((ref) async {
-  final aujourdhui = await ref.watch(anniversairesAujourdhuiProvider.future);
-  final semaine = await ref.watch(anniversairesSemaineProvider.future);
-  final mois = await ref.watch(anniversairesMoisProvider.future);
+  final repository = ref.watch(fideleRepositoryProvider);
 
-  return AnniversairesStats(
-    aujourdhui: aujourdhui,
-    cetteSemaine: semaine,
-    ceMois: mois,
-  );
+  try {
+    final aujourdhui = await repository.getAnniversairesAujourdhui();
+    final semaine = await repository.getAnniversairesSemaine();
+    final mois = await repository.getAnniversairesMois();
+
+    return AnniversairesStats(
+      aujourdhui: aujourdhui,
+      cetteSemaine: semaine,
+      ceMois: mois,
+    );
+  } catch (e) {
+    // En cas d'erreur, essayer au moins de récupérer ce qui marche
+    List<FideleModel> aujourdhui = [];
+    List<FideleModel> semaine = [];
+    List<FideleModel> mois = [];
+
+    try { aujourdhui = await repository.getAnniversairesAujourdhui(); } catch (_) {}
+    try { semaine = await repository.getAnniversairesSemaine(); } catch (_) {}
+    try { mois = await repository.getAnniversairesMois(); } catch (_) {}
+
+    return AnniversairesStats(
+      aujourdhui: aujourdhui,
+      cetteSemaine: semaine,
+      ceMois: mois,
+    );
+  }
 });
 
 /// Classe pour les statistiques d'anniversaires

@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
-import '../dashboard/screens/home_screen.dart';
-import '../boss/screens/boss_list_screen.dart';
-import '../groupes/screens/groupes_screen.dart';
+import '../dashboard/screens/responsable_home_screen.dart';
 import '../fideles/screens/fideles_list_screen.dart';
+import '../anniversaires/screens/anniversaires_screen.dart';
 
-/// Provider pour l'index de navigation actuel
-final currentNavIndexProvider = StateProvider<int>((ref) => 0);
+/// Provider pour l'index de navigation responsable
+final responsableNavIndexProvider = StateProvider<int>((ref) => 0);
 
-/// Shell principal pour le Pasteur (4 onglets)
-class MainShell extends ConsumerWidget {
-  const MainShell({super.key});
+/// Shell pour les Patriarches et Responsables (3 onglets)
+class ResponsableShell extends ConsumerWidget {
+  const ResponsableShell({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentIndex = ref.watch(currentNavIndexProvider);
+    final currentIndex = ref.watch(responsableNavIndexProvider);
 
     final screens = [
-      const HomeScreen(),
-      const BossListScreen(),
-      const GroupesScreen(),
+      const ResponsableHomeScreen(),
       const FidelesListScreen(),
+      const AnniversairesScreen(),
     ];
 
     return Scaffold(
@@ -53,28 +51,21 @@ class MainShell extends ConsumerWidget {
                   activeIcon: Icons.home_rounded,
                   label: 'Accueil',
                   isActive: currentIndex == 0,
-                  onTap: () => ref.read(currentNavIndexProvider.notifier).state = 0,
-                ),
-                _NavItem(
-                  icon: Icons.work_outline_rounded,
-                  activeIcon: Icons.work_rounded,
-                  label: 'BOSS',
-                  isActive: currentIndex == 1,
-                  onTap: () => ref.read(currentNavIndexProvider.notifier).state = 1,
-                ),
-                _NavItem(
-                  icon: Icons.groups_outlined,
-                  activeIcon: Icons.groups_rounded,
-                  label: 'Groupes',
-                  isActive: currentIndex == 2,
-                  onTap: () => ref.read(currentNavIndexProvider.notifier).state = 2,
+                  onTap: () => ref.read(responsableNavIndexProvider.notifier).state = 0,
                 ),
                 _NavItem(
                   icon: Icons.people_outline_rounded,
                   activeIcon: Icons.people_rounded,
-                  label: 'Fidèles',
-                  isActive: currentIndex == 3,
-                  onTap: () => ref.read(currentNavIndexProvider.notifier).state = 3,
+                  label: 'Membres',
+                  isActive: currentIndex == 1,
+                  onTap: () => ref.read(responsableNavIndexProvider.notifier).state = 1,
+                ),
+                _NavItem(
+                  icon: Icons.cake_outlined,
+                  activeIcon: Icons.cake_rounded,
+                  label: 'Anniversaires',
+                  isActive: currentIndex == 2,
+                  onTap: () => ref.read(responsableNavIndexProvider.notifier).state = 2,
                 ),
               ],
             ),

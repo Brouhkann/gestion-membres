@@ -186,21 +186,20 @@ class FideleRepository {
   /// Récupère les anniversaires de la semaine
   Future<List<FideleModel>> getAnniversairesSemaine() async {
     try {
-      final now = DateTime.now();
       final anniversaires = <FideleModel>[];
 
       // Récupère tous les fidèles actifs avec date de naissance
       final data = await _supabase.fideles
           .select('*, tribu:tribus(nom)')
           .eq('actif', true)
-          .not('jour_naissance', 'is', null)
-          .not('mois_naissance', 'is', null)
           .order('mois_naissance')
           .order('jour_naissance');
 
       for (final json in data) {
         final fidele = FideleModel.fromJson(json);
-        if (fidele.isAnniversaireCetteSemaine) {
+        if (fidele.jourNaissance != null &&
+            fidele.moisNaissance != null &&
+            fidele.isAnniversaireCetteSemaine) {
           anniversaires.add(fidele);
         }
       }

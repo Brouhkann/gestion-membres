@@ -15,6 +15,7 @@ class FideleModel extends Equatable {
   final String? profession;
   final String? invitePar; // ID du fidèle qui l'a invité
   final String tribuId;
+  final String? celluleId; // ID de la cellule
   final String? photoUrl;
   final bool actif;
   final DateTime createdAt;
@@ -22,6 +23,7 @@ class FideleModel extends Equatable {
 
   // Relations (chargées séparément)
   final String? tribuNom;
+  final String? celluleNom;
   final String? inviteParNom;
   final List<String>? departementsIds;
 
@@ -38,11 +40,13 @@ class FideleModel extends Equatable {
     this.profession,
     this.invitePar,
     required this.tribuId,
+    this.celluleId,
     this.photoUrl,
     this.actif = true,
     required this.createdAt,
     this.updatedAt,
     this.tribuNom,
+    this.celluleNom,
     this.inviteParNom,
     this.departementsIds,
   });
@@ -117,6 +121,7 @@ class FideleModel extends Equatable {
       profession: json['profession'] as String?,
       invitePar: json['invite_par'] as String?,
       tribuId: json['tribu_id'] as String,
+      celluleId: json['cellule_id'] as String?,
       photoUrl: json['photo_url'] as String?,
       actif: json['actif'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -124,6 +129,7 @@ class FideleModel extends Equatable {
           ? DateTime.parse(json['updated_at'] as String)
           : null,
       tribuNom: json['tribu']?['nom'] as String?,
+      celluleNom: json['cellule']?['nom'] as String?,
       inviteParNom: json['invite_par_fidele'] != null
           ? '${json['invite_par_fidele']['prenom']} ${json['invite_par_fidele']['nom']}'
           : null,
@@ -145,6 +151,7 @@ class FideleModel extends Equatable {
       'profession': profession,
       'invite_par': invitePar,
       'tribu_id': tribuId,
+      'cellule_id': celluleId,
       'photo_url': photoUrl,
       'actif': actif,
       'created_at': createdAt.toIso8601String(),
@@ -166,6 +173,7 @@ class FideleModel extends Equatable {
       'profession': profession,
       'invite_par': invitePar,
       'tribu_id': tribuId,
+      'cellule_id': celluleId,
       'photo_url': photoUrl,
       'actif': actif,
     };
@@ -185,11 +193,13 @@ class FideleModel extends Equatable {
     String? profession,
     String? invitePar,
     String? tribuId,
+    String? celluleId,
     String? photoUrl,
     bool? actif,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? tribuNom,
+    String? celluleNom,
     String? inviteParNom,
     List<String>? departementsIds,
   }) {
@@ -206,11 +216,13 @@ class FideleModel extends Equatable {
       profession: profession ?? this.profession,
       invitePar: invitePar ?? this.invitePar,
       tribuId: tribuId ?? this.tribuId,
+      celluleId: celluleId ?? this.celluleId,
       photoUrl: photoUrl ?? this.photoUrl,
       actif: actif ?? this.actif,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       tribuNom: tribuNom ?? this.tribuNom,
+      celluleNom: celluleNom ?? this.celluleNom,
       inviteParNom: inviteParNom ?? this.inviteParNom,
       departementsIds: departementsIds ?? this.departementsIds,
     );
@@ -230,6 +242,7 @@ class FideleModel extends Equatable {
         profession,
         invitePar,
         tribuId,
+        celluleId,
         photoUrl,
         actif,
         createdAt,

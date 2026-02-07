@@ -10,8 +10,7 @@ import '../../features/super_admin/screens/eglises_list_screen.dart';
 import '../../features/super_admin/screens/pasteurs_list_screen.dart';
 import '../../features/eglise/screens/eglise_setup_screen.dart';
 import '../../features/shell/main_shell.dart';
-import '../../features/dashboard/screens/patriarche_dashboard.dart';
-import '../../features/dashboard/screens/responsable_dashboard.dart';
+import '../../features/shell/responsable_shell.dart';
 import '../../features/fideles/screens/fideles_list_screen.dart';
 import '../../features/fideles/screens/fidele_form_screen.dart';
 import '../../features/fideles/screens/fidele_detail_screen.dart';
@@ -19,6 +18,7 @@ import '../../features/tribus/screens/tribus_list_screen.dart';
 import '../../features/tribus/screens/tribu_detail_screen.dart';
 import '../../features/departements/screens/departements_list_screen.dart';
 import '../../features/departements/screens/departement_detail_screen.dart';
+import '../../features/cellules/screens/cellule_detail_screen.dart';
 import '../../features/presences/screens/appel_screen.dart';
 import '../../features/presences/screens/historique_presences_screen.dart';
 import '../../features/anniversaires/screens/anniversaires_screen.dart';
@@ -44,6 +44,8 @@ class AppRoutes {
   static const String tribuDetail = '/tribus/:id';
   static const String departements = '/departements';
   static const String departementDetail = '/departements/:id';
+  static const String cellules = '/cellules';
+  static const String celluleDetail = '/cellules/:id';
   static const String appel = '/appel';
   static const String historiquePresences = '/presences/historique';
   static const String anniversaires = '/anniversaires';
@@ -128,9 +130,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             case UserRole.pasteur:
               return const MainShell();
             case UserRole.patriarche:
-              return const PatriarcheDashboard();
             case UserRole.responsable:
-              return const ResponsableDashboard();
+              return const ResponsableShell();
           }
         },
       ),
@@ -200,6 +201,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      // Cellules
+      GoRoute(
+        path: AppRoutes.celluleDetail,
+        name: 'cellule-detail',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CelluleDetailScreen(celluleId: id);
+        },
+      ),
+
       // Présences
       GoRoute(
         path: AppRoutes.appel,
@@ -208,9 +219,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final typeGroupe = state.uri.queryParameters['type'] ?? 'tribu';
           final groupeId = state.uri.queryParameters['groupeId'] ?? '';
           return AppelScreen(
-            typeGroupe: typeGroupe == 'tribu'
-                ? TypeGroupe.tribu
-                : TypeGroupe.departement,
+            typeGroupe: TypeGroupe.values.firstWhere(
+              (t) => t.name == typeGroupe,
+              orElse: () => TypeGroupe.tribu,
+            ),
             groupeId: groupeId,
           );
         },
@@ -222,9 +234,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final typeGroupe = state.uri.queryParameters['type'] ?? 'tribu';
           final groupeId = state.uri.queryParameters['groupeId'] ?? '';
           return HistoriquePresencesScreen(
-            typeGroupe: typeGroupe == 'tribu'
-                ? TypeGroupe.tribu
-                : TypeGroupe.departement,
+            typeGroupe: TypeGroupe.values.firstWhere(
+              (t) => t.name == typeGroupe,
+              orElse: () => TypeGroupe.tribu,
+            ),
             groupeId: groupeId,
           );
         },
@@ -267,6 +280,7 @@ extension GoRouterExtension on BuildContext {
   void goToFidele(String id) => go('${AppRoutes.fideles}/$id');
   void goToTribu(String id) => go('${AppRoutes.tribus}/$id');
   void goToDepartement(String id) => go('${AppRoutes.departements}/$id');
+  void goToCellule(String id) => go('${AppRoutes.cellules}/$id');
   void goToAppel(TypeGroupe type, String groupeId) =>
       go('${AppRoutes.appel}?type=${type.name}&groupeId=$groupeId');
   void goToHistorique(TypeGroupe type, String groupeId) =>

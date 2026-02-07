@@ -133,6 +133,7 @@ enum StatutPresence {
 enum TypeGroupe {
   tribu,
   departement,
+  cellule,
   eglise;
 
   String get label {
@@ -141,6 +142,8 @@ enum TypeGroupe {
         return 'Tribu';
       case TypeGroupe.departement:
         return 'Département';
+      case TypeGroupe.cellule:
+        return 'Cellule';
       case TypeGroupe.eglise:
         return 'Église entière';
     }

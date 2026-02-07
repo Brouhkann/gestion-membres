@@ -71,6 +71,8 @@ extension SupabaseExtensions on SupabaseService {
   SupabaseQueryBuilder get tribus => from('tribus');
   SupabaseQueryBuilder get departements => from('departements');
   SupabaseQueryBuilder get fideleDepartements => from('fidele_departements');
+  SupabaseQueryBuilder get cellules => from('cellules');
+  SupabaseQueryBuilder get fideleCellules => from('fidele_cellules');
   SupabaseQueryBuilder get sessionsAppel => from('sessions_appel');
   SupabaseQueryBuilder get presences => from('presences');
 }

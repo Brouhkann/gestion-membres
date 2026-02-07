@@ -5,8 +5,10 @@ import '../../../core/router/app_router.dart';
 import '../../../core/extensions/context_extensions.dart';
 import '../../../data/models/tribu_model.dart';
 import '../../../data/models/departement_model.dart';
+import '../../../data/models/cellule_model.dart';
 import '../../../providers/tribu_provider.dart';
 import '../../../providers/departement_provider.dart';
+import '../../../providers/cellule_provider.dart';
 import '../../../providers/auth_provider.dart';
 
 class GroupesScreen extends ConsumerStatefulWidget {
@@ -23,10 +25,14 @@ class _GroupesScreenState extends ConsumerState<GroupesScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tribusProvider.notifier).loadAllWithStats();
       ref.read(departementsProvider.notifier).loadAllWithStats();
+      ref.read(cellulesProvider.notifier).loadAllWithStats();
     });
   }
 
@@ -60,6 +66,7 @@ class _GroupesScreenState extends ConsumerState<GroupesScreen>
           tabs: const [
             Tab(text: 'Tribus'),
             Tab(text: 'Départements'),
+            Tab(text: 'Cellules'),
           ],
         ),
       ),
@@ -68,19 +75,28 @@ class _GroupesScreenState extends ConsumerState<GroupesScreen>
         children: [
           _TribusTab(),
           _DepartementsTab(),
+          _CellulesTab(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           if (_tabController.index == 0) {
             _showAddTribuDialog(context);
-          } else {
+          } else if (_tabController.index == 1) {
             _showAddDepartementDialog(context);
+          } else {
+            _showAddCelluleDialog(context);
           }
         },
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add),
-        label: Text(_tabController.index == 0 ? 'Tribu' : 'Département'),
+        label: Text(
+          _tabController.index == 0
+              ? 'Tribu'
+              : _tabController.index == 1
+                  ? 'Département'
+                  : 'Cellule',
+        ),
       ),
     );
   }
@@ -352,6 +368,140 @@ class _GroupesScreenState extends ConsumerState<GroupesScreen>
       ),
     );
   }
+
+  void _showAddCelluleDialog(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
+    final nomController = TextEditingController();
+    final descriptionController = TextEditingController();
+    bool isLoading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.divider,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Nouvelle Cellule',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: nomController,
+                    decoration: InputDecoration(
+                      labelText: 'Nom de la cellule',
+                      prefixIcon: const Icon(Icons.cell_tower),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    validator: (v) => v?.isEmpty ?? true ? 'Requis' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: descriptionController,
+                    decoration: InputDecoration(
+                      labelText: 'Description (optionnel)',
+                      prefixIcon: const Icon(Icons.description),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              if (formKey.currentState!.validate()) {
+                                setState(() => isLoading = true);
+
+                                final egliseId = ref.read(userEgliseIdProvider);
+                                if (egliseId == null) {
+                                  context.showErrorSnackBar('Erreur: église non trouvée');
+                                  setState(() => isLoading = false);
+                                  return;
+                                }
+
+                                final cellule = CelluleModel(
+                                  id: '',
+                                  nom: nomController.text.trim(),
+                                  description: descriptionController.text.trim().isEmpty
+                                      ? null
+                                      : descriptionController.text.trim(),
+                                  egliseId: egliseId,
+                                  createdAt: DateTime.now(),
+                                );
+
+                                final result = await ref.read(cellulesProvider.notifier).create(cellule);
+
+                                if (result != null && context.mounted) {
+                                  Navigator.pop(context);
+                                  context.showSuccessSnackBar('Cellule créée');
+                                } else if (context.mounted) {
+                                  context.showErrorSnackBar('Erreur');
+                                  setState(() => isLoading = false);
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Créer'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TribusTab extends ConsumerWidget {
@@ -460,6 +610,62 @@ class _DepartementsTab extends ConsumerWidget {
             color: AppColors.responsableColor,
             onTap: () => context.goToDepartement(dept.id),
             isBoss: true,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CellulesTab extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cellulesState = ref.watch(cellulesProvider);
+
+    if (cellulesState.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (cellulesState.cellules.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cell_tower_outlined, size: 80, color: AppColors.textHint),
+            const SizedBox(height: 16),
+            const Text(
+              'Aucune cellule',
+              style: TextStyle(
+                fontSize: 18,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Créez votre première cellule',
+              style: TextStyle(color: AppColors.textHint),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async =>
+          ref.read(cellulesProvider.notifier).loadAllWithStats(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: cellulesState.cellules.length,
+        itemBuilder: (context, index) {
+          final cellule = cellulesState.cellules[index];
+          return _ModernGroupCard(
+            title: cellule.nom,
+            subtitle: cellule.responsableNom ?? 'Pas de responsable',
+            membresCount: cellule.nombreMembres ?? 0,
+            membresActifs: cellule.nombreMembresActifs ?? 0,
+            icon: Icons.cell_tower_rounded,
+            color: AppColors.responsableColor,
+            onTap: () => context.goToCellule(cellule.id),
           );
         },
       ),

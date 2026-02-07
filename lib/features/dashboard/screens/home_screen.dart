@@ -12,6 +12,7 @@ import '../../../providers/anniversaire_provider.dart';
 import '../widgets/modern_stat_card.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/anniversaire_widget.dart';
+import '../../settings/screens/settings_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -106,9 +107,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       color: Colors.white.withAlpha(30),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.notifications_outlined, color: Colors.white),
+                    child: const Icon(Icons.settings_outlined, color: Colors.white),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
                 ),
                 const SizedBox(width: 8),
               ],
@@ -221,7 +226,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       loading: () => const Center(
                         child: CircularProgressIndicator(),
                       ),
-                      error: (_, __) => const Text('Erreur de chargement'),
+                      error: (error, _) => Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withAlpha(15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Erreur anniversaires: $error',
+                                style: const TextStyle(fontSize: 12, color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
 
                     const SizedBox(height: 28),
