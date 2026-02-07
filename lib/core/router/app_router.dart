@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../data/models/enums.dart';
 import '../../features/auth/screens/login_screen.dart';
+import '../../features/auth/screens/splash_screen.dart';
 import '../../features/super_admin/screens/super_admin_dashboard.dart';
 import '../../features/super_admin/screens/eglises_list_screen.dart';
 import '../../features/super_admin/screens/pasteurs_list_screen.dart';
@@ -27,6 +28,7 @@ final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Routes de l'application
 class AppRoutes {
+  static const String splash = '/';
   static const String login = '/login';
   static const String dashboard = '/dashboard';
   static const String egliseSetup = '/eglise/setup';
@@ -53,15 +55,22 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: AppRoutes.login,
+    initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
     redirect: (context, state) {
       final isAuthenticated = authState.isAuthenticated;
+      final isLoading = authState.isLoading;
       final user = authState.user;
+      final isSplashRoute = state.matchedLocation == AppRoutes.splash;
       final isLoginRoute = state.matchedLocation == AppRoutes.login;
       final isSetupRoute = state.matchedLocation == AppRoutes.egliseSetup;
 
-      // Si pas authentifié et pas sur login, redirige vers login
+      // Si on est sur le splash, laisser le splash gérer la redirection
+      if (isSplashRoute) {
+        return null;
+      }
+
+      // Si pas authentifié et pas sur login/splash, redirige vers login
       if (!isAuthenticated && !isLoginRoute) {
         return AppRoutes.login;
       }
@@ -84,6 +93,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // Splash (vérification de session)
+      GoRoute(
+        path: AppRoutes.splash,
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+
       // Login
       GoRoute(
         path: AppRoutes.login,
