@@ -51,15 +51,26 @@ class AppRoutes {
   static const String anniversaires = '/anniversaires';
 }
 
+/// Listenable pour notifier GoRouter des changements d'auth
+class _AuthNotifierListenable extends ChangeNotifier {
+  _AuthNotifierListenable(Ref ref) {
+    ref.listen(authProvider, (_, __) {
+      notifyListeners();
+    });
+  }
+}
+
 /// Provider pour le router
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  final authListenable = _AuthNotifierListenable(ref);
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
+    refreshListenable: authListenable,
     redirect: (context, state) {
+      final authState = ref.read(authProvider);
       final isAuthenticated = authState.isAuthenticated;
       final isLoading = authState.isLoading;
       final user = authState.user;
@@ -67,8 +78,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoginRoute = state.matchedLocation == AppRoutes.login;
       final isSetupRoute = state.matchedLocation == AppRoutes.egliseSetup;
 
-      // Si on est sur le splash, laisser le splash gérer la redirection
-      if (isSplashRoute) {
+      // Si loading ou sur le splash, laisser le splash gérer
+      if (isSplashRoute || isLoading) {
         return null;
       }
 
@@ -79,7 +90,6 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Si authentifié et sur login, redirige vers dashboard
       if (isAuthenticated && isLoginRoute) {
-        // Si pasteur et première connexion, redirige vers setup
         if (user != null && user.isPasteur && user.premiereConnexion) {
           return AppRoutes.egliseSetup;
         }

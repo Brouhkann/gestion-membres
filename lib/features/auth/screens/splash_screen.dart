@@ -20,8 +20,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
-    // Vérifie si une session existe
-    await ref.read(authProvider.notifier).checkAuthStatus();
+    try {
+      // Vérifie si une session existe avec un timeout de 10 secondes
+      await ref.read(authProvider.notifier).checkAuthStatus()
+          .timeout(const Duration(seconds: 10));
+    } catch (e) {
+      // En cas de timeout ou d'erreur, aller au login
+      if (mounted) context.go(AppRoutes.login);
+      return;
+    }
 
     if (!mounted) return;
 
